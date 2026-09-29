@@ -1,75 +1,49 @@
-# ScheduleU - Sistema de Gestion y Asignacion de Horarios Universitarios
+# ScheduleU - Backend (Spring Boot 3 + MySQL)
 
 ![ScheduleU](https://img.shields.io/badge/Backend-Spring%20Boot%203.2.5-green)
-![ScheduleU](https://img.shields.io/badge/Frontend-React%2018%20%2B%20Vite-blue)
 ![ScheduleU](https://img.shields.io/badge/BD-MySQL%208-orange)
+![ScheduleU](https://img.shields.io/badge/Auth-JWT%20Bearer-blue)
 
 ## Descripcion
-ScheduleU es un sistema completo para la gestion academica universitaria que permite:
-- Administrar asignaturas, docentes, salones, grupos y horarios
-- Realizar inscripciones de estudiantes
-- Generar asignaciones inteligentes de horarios (primera y segunda ronda)
-- Gestionar preferencias de estudiantes (jornada, docente, grupos preferidos)
-- Visualizar horarios confirmados por estudiante
+Backend API REST del sistema ScheduleU para la gestion y asignacion de horarios universitarios.
+Incluye autenticacion JWT, CRUD completo de 9 entidades y algoritmo de asignacion de horarios
+con 2 rondas, preferencias de estudiante y confirmacion de matricula.
 
-## Arquitectura
-```
-Horario_uni1/
-├── src/                     # Backend Spring Boot (Java 17+)
-│   └── main/java/com/scheduleu/
-│       ├── config/          # Seguridad, DataInitializer
-│       ├── controller/      # API REST
-│       ├── dto/             # Objetos de transferencia
-│       ├── model/           # Entidades JPA
-│       ├── repository/      # Repositorios JPA
-│       ├── security/        # JWT, Autenticacion
-│       └── service/         # Logica de negocio
-├── frontend/                # Frontend React 18 + Vite
-│   └── src/
-│       ├── components/      # Login, Navbar, CrudView
-│       ├── services/        # API client (api.js)
-│       └── views/           # Vistas CRUD + Asignaciones
-├── INSTALAR_TODO.sql        # Script de instalacion TODO-EN-1
-├── pom.xml                  # Configuracion Maven (backend)
-└── frontend/package.json    # Configuracion NPM (frontend)
-```
+## Repositorios relacionados
+- **Backend**: Este repositorio (`Horario_uni1`)
+- **Frontend**: `Horario_uni1_frontend` (React 18 + Vite)
 
 ## Prerrequisitos
 | Componente     | Version minima |
 |----------------|----------------|
 | Java           | 17+ (recomendado 21 LTS) |
-| Node.js        | 18+            |
-| MySQL          | 8.x (via XAMPP) |
+| MySQL          | 8.x (via XAMPP/WAMP) |
 | Maven          | 3.8+           |
 | Git            | Cualquiera     |
 
+> ⚠️ Nota: **Java 25** tiene incompatibilidades con versiones antiguas de Lombok.
+> Si usas Java 25+, actualiza a Spring Boot 3.4+ o usa Java 21 LTS.
+
 ---
 
-## 🚀 Instalacion y Ejecucion (Paso a Paso)
+## 🚀 Instalacion y Ejecucion
 
-### PASO 1: Instalar la Base de Datos
+### PASO 1: Base de Datos
 1. Abre **XAMPP** y enciende **Apache** y **MySQL**
 2. Abre **phpMyAdmin** (http://localhost/phpmyadmin)
-3. Importa / ejecuta el script [INSTALAR_TODO.sql](INSTALAR_TODO.sql)
-4. Verifica que se haya creado la BD `horario_uni1` con los datos iniciales
+3. Ejecuta el script [INSTALAR_TODO.sql](INSTALAR_TODO.sql) — crea la BD `horario_uni1`, tablas y datos de prueba
 
 ### PASO 2: Levantar el Backend (puerto 8080)
 ```bash
 # Desde la raiz del proyecto
 mvn spring-boot:run
 ```
-O desde IntelliJ IDEA:
-- Abre el proyecto y ejecuta `ScheduleuApplication` (clase principal)
 
-Al arrancar, el **DataInitializer** valida y corrige automaticamente las contraseñas de los usuarios.
+O desde **IntelliJ IDEA**:
+- Abre el proyecto y ejecuta la clase principal `ScheduleuApplication`
 
-### PASO 3: Levantar el Frontend (puerto 3000)
-```bash
-cd frontend
-npm install          # Solo la primera vez
-npm run dev
-```
-Abre tu navegador en: **http://localhost:3000**
+Al arrancar, el **DataInitializer** detecta y corrige automaticamente las contraseñas
+(con prefijo `TMP_NO_ENCRYPTED_` en la BD), encriptandolas con BCrypt.
 
 ---
 
@@ -83,66 +57,71 @@ Abre tu navegador en: **http://localhost:3000**
 
 ---
 
-## 📡 Endpoints API (prefijo: `/api`)
+## 📡 Endpoints API (prefijo comun: `/api`)
 
-| Grupo         | Metodo | Ruta                   | Descripcion                     |
-|---------------|--------|------------------------|---------------------------------|
-| **Auth**      | POST   | `/api/auth/login`      | Iniciar sesion (devuelve JWT)  |
-| **Auth**      | POST   | `/api/auth/registrar`  | Registrar nuevo usuario        |
-| Asignaturas   | CRUD   | `/api/asignaturas`     | Gestionar asignaturas          |
-| Estudiantes   | CRUD   | `/api/estudiantes`     | Gestionar estudiantes          |
-| Docentes      | CRUD   | `/api/docentes`        | Gestionar docentes             |
-| Salones       | CRUD   | `/api/salones`         | Gestionar salones              |
-| Grupos        | CRUD   | `/api/grupos`          | Gestionar grupos               |
-| Horarios      | CRUD   | `/api/horarios`        | Gestionar horarios             |
-| Inscripciones | CRUD   | `/api/inscripciones`   | Gestionar inscripciones        |
-| Asignaciones  | CRUD   | `/api/asignaciones`    | Gestionar asignaciones         |
-| Mi Horario    | Varios | `/api/mis-horarios/**` | Flujo estudiantil              |
+| Grupo           | Metodo HTTP | Ruta                       | Descripcion                              |
+|-----------------|-------------|----------------------------|------------------------------------------|
+| **Auth**        | POST        | `/api/auth/login`          | Iniciar sesion (devuelve JWT Bearer)    |
+| **Auth**        | POST        | `/api/auth/registrar`      | Registrar nuevo usuario                 |
+| Asignaturas     | CRUD        | `/api/asignaturas`         | Gestionar asignaturas                   |
+| Estudiantes     | CRUD        | `/api/estudiantes`         | Gestionar estudiantes                   |
+| Docentes        | CRUD        | `/api/docentes`            | Gestionar docentes                      |
+| Salones         | CRUD        | `/api/salones`             | Gestionar salones                       |
+| Grupos          | CRUD        | `/api/grupos`              | Gestionar grupos de clase               |
+| Horarios        | CRUD        | `/api/horarios`            | Gestionar horarios por grupo            |
+| Inscripciones   | CRUD        | `/api/inscripciones`       | Gestionar inscripciones de materias     |
+| Asignaciones    | CRUD        | `/api/asignaciones`        | Gestionar asignaciones de estudiantes   |
+| Mi Horario      | GET/POST    | `/api/mis-horarios/**`     | Flujo estudiantil: generar/confirmar    |
 
 ---
 
-## ⚙️ Configuracion Importante
+## 📁 Arquitectura del Backend
 
-**Backend** - Edita `src/main/resources/application.properties` si necesitas cambiar credenciales MySQL:
+```
+Horario_uni1/
+├── src/main/java/com/scheduleu/
+│   ├── ScheduleuApplication.java
+│   ├── config/              # SecurityConfig, DataInitializer, SetupDataRunner
+│   ├── controller/          # 10 Controladores REST (api/*)
+│   ├── dto/                 # LoginRequest, AuthResponse, PreferenciasRequest...
+│   ├── exception/           # GlobalExceptionHandler
+│   ├── model/               # 9 Entidades JPA + Enums (Usuario, Estudiante...)
+│   ├── repository/          # Repositorios Spring Data JPA
+│   ├── security/            # JwtTokenProvider, JwtAuthenticationFilter, CustomUserDetailsService
+│   └── service/             # Logica de negocio + ScheduleAssignmentService (algoritmo)
+├── src/main/resources/
+│   └── application.properties
+├── INSTALAR_TODO.sql        # Script de instalacion TODO-EN-1 (BD + datos)
+├── schema.sql               # Schema base
+├── parche_nuevo_modelo.sql  # Parches modelo
+├── schema_datos_reales_semestre5.sql
+└── pom.xml                  # Dependencias Maven
+```
+
+## ⚙️ Configuracion (`application.properties`)
 ```properties
-spring.datasource.url=jdbc:mysql://localhost:3306/horario_uni1
+# Base de datos MySQL (XAMPP root sin password)
+spring.datasource.url=jdbc:mysql://localhost:3306/horario_uni1?useSSL=false&serverTimezone=America/Bogota
 spring.datasource.username=root
 spring.datasource.password=
+
+# JWT
 jwt.secret=scheduleu-secret-key-2024-universidad-cundinamarca-sistemas-informacion
-```
-
-**Frontend** - Edita `frontend/src/services/api.js` si cambias el puerto backend:
-```js
-const API_URL = '/api'  // El proxy de Vite redirige a http://localhost:8080
-```
-
-El `vite.config.js` ya trae configurado el proxy:
-```js
-proxy: { '/api': 'http://localhost:8080' }
+jwt.expiration=86400000
 ```
 
 ---
 
-## 📦 Subir a GitHub
+## 📦 Subir a GitHub (este repo Backend)
 
 ```bash
-# Inicializar repositorio (solo primera vez)
-git init
-git add .
-git commit -m "feat: ScheduleU inicial - Backend y Frontend completos"
-git branch -M main
-
-# Conectar a tu repositorio remoto
 git remote add origin https://github.com/TU_USUARIO/Horario_uni1.git
 git push -u origin main
 ```
 
-## 📝 Notas Importantes
+## 📝 Notas
+- El DataInitializer corre automaticamente al iniciar la app: re-encripta contraseñas `TMP_NO_ENCRYPTED_`
+- Cross-Origin (CORS) habilitado globalmente para que el frontend (puerto 3000) se conecte sin problemas
+- JPA ddl-auto=update: actualiza el esquema sin borrar datos
+- Los endpoints requieren token JWT Bearer excepto `/api/auth/**` y OPTIONS
 
-- **Java 25** puede tener incompatibilidades con Lombok. Usa **Java 21 LTS** o actualiza a Spring Boot 3.4+
-- En Windows PowerShell, si `npm install` falla por permisos, usa:
-  ```powershell
-  Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
-  ```
-  o ejecuta los comandos desde **CMD**.
-- Nunca subas archivos `.env` o secrets a GitHub — ya estan bloqueados en `.gitignore`.
