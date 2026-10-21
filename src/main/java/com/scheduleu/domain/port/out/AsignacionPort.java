@@ -16,4 +16,5 @@ public interface AsignacionPort {
     boolean existsById(Integer id);
     void deleteById(Integer id);
     void deleteAllById(Iterable<? extends Integer> ids);
+    void eliminarPorEstudiante(Integer idEstudiante);
 }

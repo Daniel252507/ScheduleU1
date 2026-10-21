@@ -4,9 +4,7 @@ import com.scheduleu.domain.model.Estudiante;
 import com.scheduleu.domain.model.Usuario;
 import com.scheduleu.domain.port.in.EnlaceContrasenaUseCase;
 import com.scheduleu.domain.port.in.EstudianteUseCase;
-import com.scheduleu.domain.port.out.EstudiantePort;
-import com.scheduleu.domain.port.out.TokenRecuperacionPort;
-import com.scheduleu.domain.port.out.UsuarioPort;
+import com.scheduleu.domain.port.out.*;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,17 +19,26 @@ public class EstudianteService implements EstudianteUseCase {
     private final EstudiantePort estudianteRepository;
     private final UsuarioPort usuarioRepository;
     private final TokenRecuperacionPort tokenRecuperacionRepository;
+    private final InscripcionPort inscripcionRepository;
+    private final AsignacionPort asignacionRepository;
+    private final PreferenciaEstudiantePort preferenciaEstudianteRepository;
     private final PasswordEncoder passwordEncoder;
     private final EnlaceContrasenaUseCase enlaceContrasenaUseCase;
 
     public EstudianteService(EstudiantePort estudianteRepository,
                              UsuarioPort usuarioRepository,
                              TokenRecuperacionPort tokenRecuperacionRepository,
+                             InscripcionPort inscripcionRepository,
+                             AsignacionPort asignacionRepository,
+                             PreferenciaEstudiantePort preferenciaEstudianteRepository,
                              PasswordEncoder passwordEncoder,
                              EnlaceContrasenaUseCase enlaceContrasenaUseCase) {
         this.estudianteRepository = estudianteRepository;
         this.usuarioRepository = usuarioRepository;
         this.tokenRecuperacionRepository = tokenRecuperacionRepository;
+        this.inscripcionRepository = inscripcionRepository;
+        this.asignacionRepository = asignacionRepository;
+        this.preferenciaEstudianteRepository = preferenciaEstudianteRepository;
         this.passwordEncoder = passwordEncoder;
         this.enlaceContrasenaUseCase = enlaceContrasenaUseCase;
     }
@@ -81,7 +88,14 @@ public class EstudianteService implements EstudianteUseCase {
         Estudiante estudiante = estudianteRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Estudiante no encontrado con id: " + id));
         Usuario usuario = estudiante.getUsuario();
+
+        // Limpiar datos relacionados antes de borrar al estudiante
+        inscripcionRepository.eliminarPorEstudiante(id);
+        asignacionRepository.eliminarPorEstudiante(id);
+        preferenciaEstudianteRepository.eliminarPorEstudiante(id);
+
         estudianteRepository.deleteById(id);
+
         if (usuario != null) {
             tokenRecuperacionRepository.eliminarPorUsuario(usuario.getIdUsuario());
             usuarioRepository.deleteById(usuario.getIdUsuario());
