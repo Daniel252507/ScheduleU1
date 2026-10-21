@@ -285,44 +285,54 @@ INSERT INTO horarios (id_horario, id_grupo, dia, hora_inicio, hora_fin) VALUES
 -- FASE 5) AGREGAR FOREIGN KEYS (TODAS AL FINAL — evita el error 150)
 -- IMPORTANTE: TODOS los tipos coinciden INT ↔ INT / BIGINT ↔ BIGINT.
 -- ===========================================================================
--- Ya que los ADD CONSTRAINT no pueden ir en bloque PREPARE/EXECUTE dinámico,
--- usamos el patron "DROP IF EXISTS + ADD".
+-- `DROP FOREIGN KEY IF EXISTS` no existe en MySQL 8 ni en TiDB, por eso cada
+-- tabla elimina dinámicamente sus FK existentes (si las hay) antes de volver a
+-- crearlas. Así el script se puede ejecutar tantas veces como se quiera.
+SET @sql := (SELECT IFNULL(CONCAT('ALTER TABLE grupos ', GROUP_CONCAT(CONCAT('DROP FOREIGN KEY ', CONSTRAINT_NAME) SEPARATOR ', ')), 'SELECT 1') FROM information_schema.TABLE_CONSTRAINTS WHERE CONSTRAINT_SCHEMA = DATABASE() AND TABLE_NAME = 'grupos' AND CONSTRAINT_TYPE = 'FOREIGN KEY');
+PREPARE st FROM @sql;
+EXECUTE st; DEALLOCATE PREPARE st;
 ALTER TABLE grupos
-    DROP FOREIGN KEY IF EXISTS fk_grp_asig,
     ADD CONSTRAINT fk_grp_asig       FOREIGN KEY (id_asignatura) REFERENCES asignaturas(id_asignatura) ON DELETE CASCADE,
-    DROP FOREIGN KEY IF EXISTS fk_grp_doc,
     ADD CONSTRAINT fk_grp_doc        FOREIGN KEY (id_docente)    REFERENCES docentes(id_docente)       ON DELETE SET NULL,
-    DROP FOREIGN KEY IF EXISTS fk_grp_sal,
     ADD CONSTRAINT fk_grp_sal        FOREIGN KEY (id_salon)      REFERENCES salones(id_salon)         ON DELETE SET NULL;
 
+SET @sql := (SELECT IFNULL(CONCAT('ALTER TABLE horarios ', GROUP_CONCAT(CONCAT('DROP FOREIGN KEY ', CONSTRAINT_NAME) SEPARATOR ', ')), 'SELECT 1') FROM information_schema.TABLE_CONSTRAINTS WHERE CONSTRAINT_SCHEMA = DATABASE() AND TABLE_NAME = 'horarios' AND CONSTRAINT_TYPE = 'FOREIGN KEY');
+PREPARE st FROM @sql;
+EXECUTE st; DEALLOCATE PREPARE st;
 ALTER TABLE horarios
-    DROP FOREIGN KEY IF EXISTS fk_hor_grp,
     ADD CONSTRAINT fk_hor_grp        FOREIGN KEY (id_grupo)      REFERENCES grupos(id_grupo)           ON DELETE CASCADE;
 
+SET @sql := (SELECT IFNULL(CONCAT('ALTER TABLE estudiantes ', GROUP_CONCAT(CONCAT('DROP FOREIGN KEY ', CONSTRAINT_NAME) SEPARATOR ', ')), 'SELECT 1') FROM information_schema.TABLE_CONSTRAINTS WHERE CONSTRAINT_SCHEMA = DATABASE() AND TABLE_NAME = 'estudiantes' AND CONSTRAINT_TYPE = 'FOREIGN KEY');
+PREPARE st FROM @sql;
+EXECUTE st; DEALLOCATE PREPARE st;
 ALTER TABLE estudiantes
-    DROP FOREIGN KEY IF EXISTS fk_est_usr,
     ADD CONSTRAINT fk_est_usr        FOREIGN KEY (id_usuario)    REFERENCES usuarios(id_usuario)       ON DELETE SET NULL;
 
+SET @sql := (SELECT IFNULL(CONCAT('ALTER TABLE inscripciones ', GROUP_CONCAT(CONCAT('DROP FOREIGN KEY ', CONSTRAINT_NAME) SEPARATOR ', ')), 'SELECT 1') FROM information_schema.TABLE_CONSTRAINTS WHERE CONSTRAINT_SCHEMA = DATABASE() AND TABLE_NAME = 'inscripciones' AND CONSTRAINT_TYPE = 'FOREIGN KEY');
+PREPARE st FROM @sql;
+EXECUTE st; DEALLOCATE PREPARE st;
 ALTER TABLE inscripciones
-    DROP FOREIGN KEY IF EXISTS fk_ins_est,
     ADD CONSTRAINT fk_ins_est        FOREIGN KEY (id_estudiante) REFERENCES estudiantes(id_estudiante) ON DELETE CASCADE,
-    DROP FOREIGN KEY IF EXISTS fk_ins_asig,
     ADD CONSTRAINT fk_ins_asig       FOREIGN KEY (id_asignatura) REFERENCES asignaturas(id_asignatura) ON DELETE CASCADE;
 
+SET @sql := (SELECT IFNULL(CONCAT('ALTER TABLE asignaciones ', GROUP_CONCAT(CONCAT('DROP FOREIGN KEY ', CONSTRAINT_NAME) SEPARATOR ', ')), 'SELECT 1') FROM information_schema.TABLE_CONSTRAINTS WHERE CONSTRAINT_SCHEMA = DATABASE() AND TABLE_NAME = 'asignaciones' AND CONSTRAINT_TYPE = 'FOREIGN KEY');
+PREPARE st FROM @sql;
+EXECUTE st; DEALLOCATE PREPARE st;
 ALTER TABLE asignaciones
-    DROP FOREIGN KEY IF EXISTS fk_asig_est,
     ADD CONSTRAINT fk_asig_est       FOREIGN KEY (id_estudiante) REFERENCES estudiantes(id_estudiante) ON DELETE CASCADE,
-    DROP FOREIGN KEY IF EXISTS fk_asig_ins,
     ADD CONSTRAINT fk_asig_ins       FOREIGN KEY (id_inscripcion) REFERENCES inscripciones(id_inscripcion) ON DELETE SET NULL,
-    DROP FOREIGN KEY IF EXISTS fk_asig_grp,
     ADD CONSTRAINT fk_asig_grp       FOREIGN KEY (id_grupo)      REFERENCES grupos(id_grupo)           ON DELETE SET NULL;
 
+SET @sql := (SELECT IFNULL(CONCAT('ALTER TABLE preferencias_estudiante ', GROUP_CONCAT(CONCAT('DROP FOREIGN KEY ', CONSTRAINT_NAME) SEPARATOR ', ')), 'SELECT 1') FROM information_schema.TABLE_CONSTRAINTS WHERE CONSTRAINT_SCHEMA = DATABASE() AND TABLE_NAME = 'preferencias_estudiante' AND CONSTRAINT_TYPE = 'FOREIGN KEY');
+PREPARE st FROM @sql;
+EXECUTE st; DEALLOCATE PREPARE st;
 ALTER TABLE preferencias_estudiante
-    DROP FOREIGN KEY IF EXISTS fk_pref_est,
     ADD CONSTRAINT fk_pref_est       FOREIGN KEY (id_estudiante) REFERENCES estudiantes(id_estudiante) ON DELETE CASCADE;
 
+SET @sql := (SELECT IFNULL(CONCAT('ALTER TABLE grupo_preferido ', GROUP_CONCAT(CONCAT('DROP FOREIGN KEY ', CONSTRAINT_NAME) SEPARATOR ', ')), 'SELECT 1') FROM information_schema.TABLE_CONSTRAINTS WHERE CONSTRAINT_SCHEMA = DATABASE() AND TABLE_NAME = 'grupo_preferido' AND CONSTRAINT_TYPE = 'FOREIGN KEY');
+PREPARE st FROM @sql;
+EXECUTE st; DEALLOCATE PREPARE st;
 ALTER TABLE grupo_preferido
-    DROP FOREIGN KEY IF EXISTS fk_gp_pref,
     ADD CONSTRAINT fk_gp_pref        FOREIGN KEY (id_preferencia) REFERENCES preferencias_estudiante(id_preferencia) ON DELETE CASCADE;
 
 -- ===========================================================================
