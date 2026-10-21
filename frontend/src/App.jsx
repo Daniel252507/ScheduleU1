@@ -1,29 +1,36 @@
-import { Routes, Route, Navigate } from 'react-router-dom'
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { useEffect, useState } from 'react'
-import Login from './components/Login.jsx'
-import Navbar from './components/Navbar.jsx'
-import Dashboard from './views/Dashboard.jsx'
-import Asignaturas from './views/Asignaturas.jsx'
-import Estudiantes from './views/Estudiantes.jsx'
-import Docentes from './views/Docentes.jsx'
-import Salones from './views/Salones.jsx'
-import Grupos from './views/Grupos.jsx'
-import Horarios from './views/Horarios.jsx'
-import Asignaciones from './views/Asignaciones.jsx'
-import MisPreferencias from './views/MisPreferencias.jsx'
-import MiHorario from './views/MiHorario.jsx'
-import { getCurrentUser } from './services/api.js'
+import Login from './infrastructure/components/Login.jsx'
+import EstablecerContrasena from './infrastructure/views/EstablecerContrasena.jsx'
+import Navbar from './infrastructure/components/Navbar.jsx'
+import Dashboard from './infrastructure/views/Dashboard.jsx'
+import Asignaturas from './infrastructure/views/Asignaturas.jsx'
+import Estudiantes from './infrastructure/views/Estudiantes.jsx'
+import Docentes from './infrastructure/views/Docentes.jsx'
+import Salones from './infrastructure/views/Salones.jsx'
+import Grupos from './infrastructure/views/Grupos.jsx'
+import Horarios from './infrastructure/views/Horarios.jsx'
+import Asignaciones from './infrastructure/views/Asignaciones.jsx'
+import MisPreferencias from './infrastructure/views/MisPreferencias.jsx'
+import MiHorario from './infrastructure/views/MiHorario.jsx'
+import { authService } from './infrastructure/config/container.js'
 
 const ROLES_CATALOGO = ['ADMINISTRADOR', 'COORDINADOR_ACADEMICO']
 
 export default function App() {
   const [user, setUser] = useState(null)
+  const location = useLocation()
 
   useEffect(() => {
-    setUser(getCurrentUser())
+    setUser(authService.getCurrentUser())
   }, [])
 
   const onAuthChange = (u) => setUser(u)
+
+  // Ruta publica: establecer contrasena desde el enlace enviado por correo.
+  if (location.pathname === '/establecer-contrasena') {
+    return <EstablecerContrasena />
+  }
 
   if (!user) {
     return <Login onLogin={onAuthChange} />

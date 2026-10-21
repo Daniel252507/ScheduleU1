@@ -251,6 +251,16 @@ body {
 }
 .error-msg.big { padding: 16px; font-size: 14px; }
 
+.success-msg {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #15803d;
+  padding: 10px 14px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  font-size: 13.5px;
+}
+
 /* ========== TABLES ========== */
 .table-wrap {
   overflow-x: auto;

@@ -1,0 +1,10 @@
+target/
+frontend/
+.idea/
+.vscode/
+.git/
+.gitignore
+*.md
+*.sql
+*.zip
+HELP.md

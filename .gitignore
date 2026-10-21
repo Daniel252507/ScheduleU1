@@ -54,3 +54,8 @@ Desktop.ini
 .env
 .env.local
 .env.*.local
+
+# ============================================
+# Paquetes de distribucion generados
+# ============================================
+*.zip

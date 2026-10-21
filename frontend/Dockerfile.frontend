@@ -1,0 +1,27 @@
+FROM node:18-alpine AS build
+
+WORKDIR /app
+
+COPY package*.json ./
+
+RUN npm install
+
+COPY . .
+
+RUN npm run build
+
+FROM nginx:alpine
+
+# Se copia como plantilla: el entrypoint de nginx sustituye ${BACKEND_URL} al arrancar.
+COPY nginx.conf /etc/nginx/templates/default.conf.template
+
+# Solo se sustituye BACKEND_URL; el resto de variables de nginx ($host, $uri, ...) se conservan.
+ENV NGINX_ENVSUBST_FILTER="^BACKEND_URL$"
+# Valor por defecto para el docker-compose local.
+ENV BACKEND_URL="http://backend:8080"
+
+COPY --from=build /app/dist /usr/share/nginx/html
+
+EXPOSE 80
+
+CMD ["nginx", "-g", "daemon off;"]

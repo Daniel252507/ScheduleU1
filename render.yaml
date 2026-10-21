@@ -1,0 +1,63 @@
+# Blueprint de despliegue GRATUITO para ScheduleU en Render.
+#
+# Uso: en Render -> New -> Blueprint -> conecta este repositorio.
+# Render creara los dos servicios de abajo. Los valores marcados con
+# `sync: false` NO quedan en el repositorio: Render los pide en el panel.
+
+services:
+  # ---------------------------------------------------------------------------
+  # Backend: Spring Boot (imagen Docker, plan free)
+  # ---------------------------------------------------------------------------
+  - type: web
+    name: scheduleu-backend
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile.backend
+    dockerContext: .
+    healthCheckPath: /api/health
+    envVars:
+      # Base de datos MySQL (TiDB Cloud Serverless)
+      - key: SPRING_DATASOURCE_URL
+        sync: false
+      - key: SPRING_DATASOURCE_USERNAME
+        sync: false
+      - key: SPRING_DATASOURCE_PASSWORD
+        sync: false
+      - key: SPRING_JPA_HIBERNATE_DDL_AUTO
+        value: update
+      # Firma de los JWT
+      - key: JWT_SECRET
+        value: scheduleu-secret-key-2024-universidad-cundinamarca-sistemas-informacion
+      - key: JWT_EXPIRATION
+        value: "86400000"
+      # Envio de correos (Gmail)
+      - key: MAIL_USERNAME
+        sync: false
+      - key: MAIL_PASSWORD
+        sync: false
+      - key: MAIL_ENABLED
+        value: "true"
+      # URL publica del frontend (para los enlaces del correo).
+      # Si Render te asigna un sufijo aleatorio, actualiza este valor.
+      - key: APP_FRONTEND_URL
+        value: https://scheduleu-frontend.onrender.com
+
+  # ---------------------------------------------------------------------------
+  # Frontend: React + Vite (sitio estatico, plan free)
+  # ---------------------------------------------------------------------------
+  - type: web
+    name: scheduleu-frontend
+    runtime: static
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    envVars:
+      # URL publica del backend terminada en /api (sin barra final).
+      # Si Render te asigna un sufijo aleatorio, actualiza este valor.
+      - key: VITE_API_URL
+        value: https://scheduleu-backend.onrender.com/api
+    routes:
+      # React Router: cualquier ruta del cliente sirve el index.html
+      - type: rewrite
+        source: /*
+        destination: /index.html
