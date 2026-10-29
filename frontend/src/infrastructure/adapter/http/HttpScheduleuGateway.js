@@ -97,6 +97,29 @@ export class HttpScheduleuGateway extends ScheduleuGateway {
     return data
   }
 
+  async loginConGoogle(idToken) {
+    const res = await fetch(`${this.baseUrl}/auth/google`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ idToken }),
+    })
+    if (!res.ok) {
+      // El backend explica el motivo (por ejemplo, correo no registrado).
+      let mensaje = 'No se pudo iniciar sesion con Google'
+      try {
+        const data = await res.json()
+        if (data && data.error) mensaje = data.error
+      } catch {
+        // Respuesta sin cuerpo JSON: se conserva el mensaje generico.
+      }
+      throw new Error(mensaje)
+    }
+    const data = await res.json()
+    localStorage.setItem('scheduleu_token', data.token)
+    localStorage.setItem('scheduleu_user', JSON.stringify(data))
+    return data
+  }
+
   async restablecerContrasena(token, contrasena) {
     const res = await fetch(`${this.baseUrl}/auth/restablecer-contrasena`, {
       method: 'POST',

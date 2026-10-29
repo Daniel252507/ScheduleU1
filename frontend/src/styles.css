@@ -77,6 +77,35 @@ body {
 }
 .login-tips ul { margin-top: 8px; padding-left: 18px; }
 
+/* ========== LOGIN CON GOOGLE ========== */
+.login-google {
+  margin-top: 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.login-separador {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-light);
+}
+
+.login-separador::before,
+.login-separador::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+
 /* ========== NAVBAR ========== */
 .navbar {
   background: #fff;

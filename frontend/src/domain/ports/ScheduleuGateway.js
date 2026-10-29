@@ -68,6 +68,16 @@ export class ScheduleuGateway {
   }
 
   /**
+   * Inicia sesión con el ID token entregado por Google Identity Services
+   * y persiste el token y los datos del usuario.
+   * @param {string} idToken Token compacto (JWT) emitido por Google.
+   * @returns {Promise<Usuario>}
+   */
+  async loginConGoogle(idToken) {
+    throw new Error('ScheduleuGateway.loginConGoogle no implementado')
+  }
+
+  /**
    * Establece una nueva contraseña a partir del token recibido por correo.
    * @param {string} token Token del enlace de correo.
    * @param {string} contrasena Nueva contraseña.

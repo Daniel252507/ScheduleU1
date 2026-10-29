@@ -1,6 +1,10 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { GoogleLogin } from '@react-oauth/google'
 import { authService } from '../config/container.js'
+
+/** Client ID de Google (build-time). Si no está definido, no se ofrece el botón. */
+const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID
 
 export default function Login({ onLogin }) {
   const [correo, setCorreo] = useState('admin@scheduleu.com')
@@ -15,6 +19,24 @@ export default function Login({ onLogin }) {
     setLoading(false)
     try {
       const data = await authService.login(correo, contrasena)
+      onLogin(authService.getCurrentUser())
+      navigate('/')
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  /**
+   * Google entrega un ID token (credential) que el backend verifica antes de
+   * emitir la sesión propia de ScheduleU.
+   */
+  async function handleGoogle(credentialResponse) {
+    setError('')
+    setLoading(true)
+    try {
+      await authService.loginConGoogle(credentialResponse.credential)
       onLogin(authService.getCurrentUser())
       navigate('/')
     } catch (err) {
@@ -57,6 +79,21 @@ export default function Login({ onLogin }) {
             {loading ? 'Ingresando...' : 'Iniciar Sesion'}
           </button>
         </form>
+
+        {googleClientId && (
+          <div className="login-google">
+            <div className="login-separador">
+              <span>o continúa con</span>
+            </div>
+            <GoogleLogin
+              onSuccess={handleGoogle}
+              onError={() => setError('No se pudo completar el inicio de sesión con Google')}
+              text="continue_with"
+              locale="es"
+            />
+          </div>
+        )}
+
         <div className="login-tips">
           <p><strong>Cuentas de prueba:</strong></p>
           <ul>

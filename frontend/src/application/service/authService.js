@@ -26,6 +26,13 @@ export function createAuthService(gateway) {
     login: (correo, contrasena) => gateway.login(correo, contrasena),
 
     /**
+     * Inicia sesión con la cuenta de Google del usuario.
+     * @param {string} idToken Token entregado por Google Identity Services.
+     * @returns {Promise<Usuario>}
+     */
+    loginConGoogle: (idToken) => gateway.loginConGoogle(idToken),
+
+    /**
      * Establece una nueva contraseña usando el token recibido por correo.
      * @param {string} token
      * @param {string} contrasena
