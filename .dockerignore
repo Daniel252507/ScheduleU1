@@ -4,6 +4,9 @@ frontend/
 .vscode/
 .git/
 .gitignore
+scheduleu.env
+.env
+.env.*
 *.md
 *.sql
 *.zip

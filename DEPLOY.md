@@ -44,7 +44,7 @@ llamando a un backend HTTP) y también el CORS.
 > |---------------------|-------|
 > | `SPRING_DATASOURCE_URL` | `jdbc:postgresql://aws-0-us-west-2.pooler.supabase.com:5432/postgres?sslmode=require` |
 > | `SPRING_DATASOURCE_USERNAME` | `postgres.skpvoqrddxqfhvtrpbyx` |
-> | `SPRING_DATASOURCE_PASSWORD` | `D@n1002460579` |
+> | `SPRING_DATASOURCE_PASSWORD` | `[TU_CONTRASEÑA_DE_SUPABASE]` |
 >
 > El archivo `scheduleu.env` ya tiene estos valores listos para subir a la EC2.
 
@@ -119,13 +119,13 @@ docker push danielp2507/scheduleu-backend:latest
 
 ### 2.5 Ejecutar el contenedor en la EC2
 
-Crea un archivo `scheduleu.env` en la EC2 con tus valores reales. Este archivo **ya existe
-en el repo** (raíz del proyecto) listo para subir — solo edítalo si quieres cambiar algo:
+Crea el archivo `scheduleu.env` en tu PC con tus valores reales. No lo subas a GitHub:
+está ignorado por Git. Transfiérelo a la EC2 con `scp` en el paso correspondiente.
 
 ```env
 SPRING_DATASOURCE_URL=jdbc:postgresql://aws-0-us-west-2.pooler.supabase.com:5432/postgres?sslmode=require
 SPRING_DATASOURCE_USERNAME=postgres.skpvoqrddxqfhvtrpbyx
-SPRING_DATASOURCE_PASSWORD=D@n1002460579
+SPRING_DATASOURCE_PASSWORD=TU_CONTRASEÑA_DE_SUPABASE
 SPRING_JPA_HIBERNATE_DDL_AUTO=update
 JWT_SECRET=cambia-esta-clave-por-una-larga-y-aleatoria
 JWT_EXPIRATION=86400000
