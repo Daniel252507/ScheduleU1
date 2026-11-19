@@ -13,6 +13,7 @@ export default function Navbar({ user, onLogout }) {
     { to: '/', label: '🏠 Inicio', end: true },
     { to: '/mis-preferencias', label: '📝 Mis Preferencias' },
     { to: '/mi-horario', label: '📅 Mi Horario' },
+    { to: '/asistente', label: '🤖 Asistente' },
   ]
   const linksCatalogo = [
     { to: '/', label: '🏠 Inicio', end: true },

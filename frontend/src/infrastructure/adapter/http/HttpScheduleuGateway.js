@@ -97,36 +97,91 @@ export class HttpScheduleuGateway extends ScheduleuGateway {
     return data
   }
 
+  /**
+   * Inicia sesión con Google. Si el correo no está registrado, el backend
+   * responde con `requiereRegistro: true` y NO se guarda sesión alguna.
+   */
   async loginConGoogle(idToken) {
     const res = await fetch(`${this.baseUrl}/auth/google`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ idToken }),
     })
+    const data = await res.json().catch(() => null)
     if (!res.ok) {
-      // El backend explica el motivo (por ejemplo, correo no registrado).
-      let mensaje = 'No se pudo iniciar sesion con Google'
-      try {
-        const data = await res.json()
-        if (data && data.error) mensaje = data.error
-      } catch {
-        // Respuesta sin cuerpo JSON: se conserva el mensaje generico.
-      }
-      throw new Error(mensaje)
+      // El backend explica el motivo (por ejemplo, token inválido).
+      throw new Error((data && data.error) || 'No se pudo iniciar sesion con Google')
     }
-    const data = await res.json()
-    localStorage.setItem('scheduleu_token', data.token)
-    localStorage.setItem('scheduleu_user', JSON.stringify(data))
+    if (data && data.requiereRegistro) {
+      return data
+    }
+    this._guardarSesion(data)
     return data
   }
 
-  async restablecerContrasena(token, contrasena) {
-    const res = await fetch(`${this.baseUrl}/auth/restablecer-contrasena`, {
+  /**
+   * Completa el alta como estudiante de una cuenta de Google nueva.
+   */
+  async registrarEstudianteConGoogle(idToken, nombre, codigo, semestre) {
+    const res = await fetch(`${this.baseUrl}/auth/google/registro`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token, contrasena }),
+      body: JSON.stringify({ idToken, nombre, codigo, semestre }),
     })
-    if (!res.ok) throw new Error('El enlace no es valido o ya expiro')
+    const data = await res.json().catch(() => null)
+    if (!res.ok) {
+      throw new Error((data && data.error) || 'No se pudo crear el usuario')
+    }
+    this._guardarSesion(data)
+    return data
+  }
+
+  /**
+   * Agrega las clases del horario confirmado del estudiante a su Google
+   * Calendar. El backend obtiene el horario a partir del JWT; aquí solo se
+   * envía el token de acceso de Google con scope `calendar.events`.
+   * @param {string} accessToken Token OAuth devuelto por Google.
+   * @returns {Promise<{eventosCreados: number, mensaje: string}>}
+   */
+  async exportarACalendar(accessToken) {
+    const res = await fetch(`${this.baseUrl}/calendario/exportar`, {
+      method: 'POST',
+      headers: this._authHeaders(),
+      body: JSON.stringify({ accessToken }),
+    })
+    const data = await res.json().catch(() => null)
+    if (!res.ok) {
+      throw new Error((data && (data.mensaje || data.error)) || 'No se pudieron agregar las clases al calendario')
+    }
+    return data
+  }
+
+  /**
+   * Envía una pregunta al asistente académico. El backend construye el
+   * contexto con el horario del estudiante (obtenido del JWT).
+   * @param {string} pregunta Pregunta en lenguaje natural.
+   * @returns {Promise<{respuesta: string}>}
+   */
+  async consultarAsistente(pregunta) {
+    const res = await fetch(`${this.baseUrl}/asistente/consultar`, {
+      method: 'POST',
+      headers: this._authHeaders(),
+      body: JSON.stringify({ pregunta }),
+    })
+    const data = await res.json().catch(() => null)
+    if (!res.ok) {
+      throw new Error((data && (data.mensaje || data.error)) || 'El asistente no pudo responder')
+    }
+    return data
+  }
+
+  /**
+   * Persiste el token y los datos del usuario autenticado.
+   * @private
+   */
+  _guardarSesion(data) {
+    localStorage.setItem('scheduleu_token', data.token)
+    localStorage.setItem('scheduleu_user', JSON.stringify(data))
   }
 
   logout() {

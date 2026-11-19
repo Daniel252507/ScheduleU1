@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, Fragment } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useGoogleLogin } from '@react-oauth/google'
 import { misHorariosService } from '../config/container.js'
 
 const DIAS = ['LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES', 'SABADO']
@@ -8,6 +9,11 @@ const HORAS = [
   '13:00', '14:00', '15:00', '16:00', '17:00', '18:00',
   '19:00', '20:00', '21:00',
 ]
+
+/** Alto en px de cada hora de la grilla semanal. */
+const ROW_H = 56
+/** Minutos desde los que arranca la grilla (primera hora de HORAS). */
+const INICIO_MIN = 7 * 60
 
 const COLORS = [
   { bg: '#dbeafe', fg: '#1d4ed8', bd: '#93c5fd' },
@@ -35,6 +41,48 @@ function extraerBloques(horarioStr) {
       raw: horarioStr,
     }
   } catch { return null }
+}
+
+/** Scope necesario para crear eventos en el calendario del usuario. */
+const CALENDAR_SCOPE = 'https://www.googleapis.com/auth/calendar.events'
+/** Client ID de Google (build-time). Sin él no se ofrece la exportación. */
+const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID
+
+/**
+ * Botón que pide a Google un token de acceso con scope de calendario y solicita
+ * al backend crear los eventos del horario. Se monta solo cuando hay Client ID,
+ * porque `useGoogleLogin` exige que exista el GoogleOAuthProvider.
+ */
+function BotonGoogleCalendar({ onMensaje, onError }) {
+  const [cargando, setCargando] = useState(false)
+
+  const solicitarAcceso = useGoogleLogin({
+    scope: CALENDAR_SCOPE,
+    onSuccess: async (tokenResponse) => {
+      try {
+        const r = await misHorariosService.exportarACalendar(tokenResponse.access_token)
+        onMensaje(r?.mensaje || 'Clases agregadas a tu Google Calendar')
+      } catch (err) {
+        onError(err.message || 'No se pudieron agregar las clases al calendario')
+      } finally {
+        setCargando(false)
+      }
+    },
+    onError: () => {
+      onError('No se pudo obtener el permiso de Google Calendar')
+      setCargando(false)
+    },
+  })
+
+  return (
+    <button
+      className="btn-secondary big"
+      onClick={() => { setCargando(true); solicitarAcceso() }}
+      disabled={cargando}
+    >
+      📆 {cargando ? 'Agregando a Google Calendar...' : 'Añadir a mi Google Calendar'}
+    </button>
+  )
 }
 
 export default function MiHorario() {
@@ -116,20 +164,24 @@ export default function MiHorario() {
     return cm
   }, [resultados])
 
+  // Cada dia es una lista de bloques posicionados por minutos (top/height en px).
+  // Asi no depende de la auto-colocacion de CSS grid, que desordenaba las horas.
   const grid = useMemo(() => {
     const g = {}
-    DIAS.forEach(d => { g[d] = {} })
+    DIAS.forEach(d => { g[d] = [] })
     resultados.filter(a => a.estado === 'ASIGNADO').forEach(a => {
       ;(a.horarios || []).forEach(h => {
         const b = extraerBloques(h)
-        if (!b) return
-        const rowStartIdx = HORAS.findIndex(x => parseHora(x) >= b.hi)
-        const rowEndIdx = HORAS.findIndex(x => parseHora(x) >= b.hf)
-        const rs = rowStartIdx >= 0 ? rowStartIdx + 2 : 2
-        const re = rowEndIdx >= 0 ? rowEndIdx + 1 : HORAS.length + 1
-        if (!g[b.dia]) return
-        const key = `${a.idAsignatura}-${a.idGrupo}-${h}`
-        g[b.dia][key] = { rs, re, a, color: colorMap[a.idAsignatura] || COLORS[0] }
+        if (!b || !g[b.dia]) return
+        // un fin como 10:59 equivale a "hasta las 11:00"
+        const fin = b.hf % 60 === 59 ? b.hf + 1 : b.hf
+        const top = ((b.hi - INICIO_MIN) / 60) * ROW_H
+        const height = Math.max(((fin - b.hi) / 60) * ROW_H, 20)
+        g[b.dia].push({
+          key: `${a.idAsignatura}-${a.idGrupo}-${h}`,
+          top, height, a,
+          color: colorMap[a.idAsignatura] || COLORS[0],
+        })
       })
     })
     return g
@@ -172,6 +224,12 @@ export default function MiHorario() {
           <button className="btn-secondary big" onClick={() => setModo('vista')}>
             ← Volver al horario confirmado
           </button>
+        )}
+        {modo === 'vista' && googleClientId && stats.ok > 0 && (
+          <BotonGoogleCalendar
+            onMensaje={(m) => { setMsg(m); setError('') }}
+            onError={(e) => { setError(e); setMsg('') }}
+          />
         )}
       </div>
 
@@ -221,36 +279,47 @@ export default function MiHorario() {
                 : 'Esta opción no tiene materias asignadas válidas.'}</em>
           </p>
         ) : (
-          <div className="schedule-grid">
-            <div className="sg-corner"><strong>Hora</strong></div>
-            {DIAS.map(d => <div key={d} className="sg-day"><strong>{d.charAt(0) + d.slice(1).toLowerCase()}</strong></div>)}
-            {HORAS.map(h => (
-              <>
-                <div key={'t-' + h} className="sg-time">{h}</div>
-                {DIAS.map(d => <div key={'c-' + d + '-' + h} className="sg-cell" />)}
-              </>
-            ))}
-            {DIAS.map(d => Object.keys(grid[d]).map(k => {
-              const cell = grid[d][k]
-              return (
-                <div
-                  key={'e-' + d + '-' + k}
-                  className="sg-event"
-                  style={{
-                    gridColumn: (DIAS.indexOf(d) + 2),
-                    gridRow: `${cell.rs} / ${cell.re}`,
-                    background: cell.color.bg,
-                    color: cell.color.fg,
-                    borderColor: cell.color.bd,
-                  }}
-                  title={`${cell.a.nombreAsignatura}\nGrupo: ${cell.a.nombreGrupo || '-'}\nDocente: ${cell.a.docente || '-'}\nSalón: ${cell.a.salon || '-'}`}
-                >
-                  <div className="sg-mat">{cell.a.nombreAsignatura}</div>
-                  <div className="sg-sub">{cell.a.nombreGrupo || ''} · {cell.a.salon || 'Salón TBD'}</div>
-                  <div className="sg-doc">{cell.a.docente || 'Docente TBD'}</div>
+          <div className="sched">
+            <div className="sched-head">
+              <div className="sched-corner"><strong>Hora</strong></div>
+              {DIAS.map(d => (
+                <div key={d} className="sched-dayname">
+                  <strong>{d.charAt(0) + d.slice(1).toLowerCase()}</strong>
                 </div>
-              )
-            }))}
+              ))}
+            </div>
+            <div className="sched-body">
+              <div className="sched-times">
+                {HORAS.map(h => (
+                  <div key={h} className="sched-time" style={{ height: ROW_H }}>{h}</div>
+                ))}
+              </div>
+              {DIAS.map(d => (
+                <div key={d} className="sched-col">
+                  {HORAS.map(h => (
+                    <div key={h} className="sched-cell" style={{ height: ROW_H }} />
+                  ))}
+                  {grid[d].map(ev => (
+                    <div
+                      key={ev.key}
+                      className="sg-ev"
+                      style={{
+                        top: ev.top,
+                        height: ev.height,
+                        background: ev.color.bg,
+                        color: ev.color.fg,
+                        borderColor: ev.color.bd,
+                      }}
+                      title={`${ev.a.nombreAsignatura}\nGrupo: ${ev.a.nombreGrupo || '-'}\nDocente: ${ev.a.docente || '-'}\nSalón: ${ev.a.salon || '-'}`}
+                    >
+                      <div className="sg-mat">{ev.a.nombreAsignatura}</div>
+                      <div className="sg-sub">{ev.a.nombreGrupo || ''} · {ev.a.salon || 'Salón TBD'}</div>
+                      <div className="sg-doc">{ev.a.docente || 'Docente TBD'}</div>
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </section>

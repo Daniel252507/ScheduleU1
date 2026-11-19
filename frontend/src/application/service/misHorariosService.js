@@ -31,6 +31,12 @@ export function createMisHorariosService(gateway) {
     generar: () => gateway.post(`${BASE}/generar`),
     /** @param {any} opcion @returns {Promise<{mensaje?: string}>} */
     confirmar: (opcion) => gateway.post(`${BASE}/confirmar`, opcion),
+    /**
+     * Agrega el horario confirmado al Google Calendar del estudiante.
+     * @param {string} accessToken Token OAuth con scope `calendar.events`.
+     * @returns {Promise<{eventosCreados: number, mensaje: string}>}
+     */
+    exportarACalendar: (accessToken) => gateway.exportarACalendar(accessToken),
   }
 }
 

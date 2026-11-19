@@ -18,6 +18,7 @@ import { createGruposService } from '../../application/service/gruposService.js'
 import { createHorariosService } from '../../application/service/horariosService.js'
 import { createAsignacionesService } from '../../application/service/asignacionesService.js'
 import { createMisHorariosService } from '../../application/service/misHorariosService.js'
+import { createAsistenteService } from '../../application/service/asistenteService.js'
 
 /**
  * Adaptador único de acceso a datos (inyectado en todos los servicios).
@@ -36,6 +37,7 @@ export const gruposService = createGruposService(gateway)
 export const horariosService = createHorariosService(gateway)
 export const asignacionesService = createAsignacionesService(gateway)
 export const misHorariosService = createMisHorariosService(gateway)
+export const asistenteService = createAsistenteService(gateway)
 
 export const services = {
   auth: authService,
@@ -47,6 +49,7 @@ export const services = {
   horarios: horariosService,
   asignaciones: asignacionesService,
   misHorarios: misHorariosService,
+  asistente: asistenteService,
 }
 
 export default services

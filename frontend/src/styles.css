@@ -503,3 +503,58 @@ body {
   font-weight: 700;
   box-shadow: 0 2px 5px rgba(0,0,0,0.15);
 }
+
+
+/* ========== GRILLA SEMANAL v2 (columnas por dia, bloques posicionados por minutos) ========== */
+.sched {
+  min-width: 920px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: #fff;
+}
+.sched-head, .sched-body {
+  display: grid;
+  grid-template-columns: 70px repeat(6, minmax(120px, 1fr));
+}
+.sched-corner, .sched-dayname {
+  background: #f1f5f9;
+  padding: 12px 8px;
+  text-align: center;
+  font-size: 13px;
+  border-bottom: 1px solid var(--border);
+}
+.sched-dayname { border-left: 1px solid var(--border); }
+.sched-times { background: #f8fafc; }
+.sched-time {
+  box-sizing: border-box;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-light);
+  border-top: 1px solid var(--border);
+}
+.sched-times .sched-time:first-child { border-top: none; }
+.sched-col { position: relative; border-left: 1px solid var(--border); }
+.sched-cell { box-sizing: border-box; border-top: 1px solid var(--border); }
+.sched-col .sched-cell:first-child { border-top: none; }
+.sg-ev {
+  position: absolute;
+  left: 2px;
+  right: 2px;
+  box-sizing: border-box;
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 1px solid;
+  overflow: hidden;
+  font-size: 12px;
+  line-height: 1.25;
+  cursor: default;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}

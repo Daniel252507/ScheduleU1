@@ -5,7 +5,7 @@ export default function Estudiantes() {
   return (
     <CrudView
       title="Estudiantes"
-      subtitle="Gestiona los estudiantes. Al crearlos se les envia un correo para establecer su contrasena"
+      subtitle="Gestiona los estudiantes. El estudiante ingresa con su cuenta de Google usando el correo registrado"
       service={estudiantesService}
       initialForm={{ nombre: '', codigo: '', semestre: 1, correo: '' }}
       labels={{

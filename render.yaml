@@ -31,21 +31,11 @@ services:
         value: scheduleu-secret-key-2024-universidad-cundinamarca-sistemas-informacion
       - key: JWT_EXPIRATION
         value: "86400000"
-      # Envio de correos (Gmail)
-      - key: MAIL_USERNAME
-        sync: false
-      - key: MAIL_PASSWORD
-        sync: false
-      - key: MAIL_ENABLED
-        value: "true"
       # Inicio de sesion con Google (OAuth 2.0). Debe coincidir con el
-      # Client ID configurado en la consola de Google Cloud.
+      # Client ID configurado en la consola de Google Cloud. Los correos no
+      # registrados completan su alta como estudiante dentro de la aplicacion.
       - key: GOOGLE_CLIENT_ID
         sync: false
-      # URL publica del frontend (para los enlaces del correo).
-      # Si Render te asigna un sufijo aleatorio, actualiza este valor.
-      - key: APP_FRONTEND_URL
-        value: https://scheduleu-frontend.onrender.com
 
   # ---------------------------------------------------------------------------
   # Frontend: React + Vite (sitio estatico, plan free)

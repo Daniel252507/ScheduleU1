@@ -1,7 +1,6 @@
-import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
+import { Routes, Route, Navigate } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import Login from './infrastructure/components/Login.jsx'
-import EstablecerContrasena from './infrastructure/views/EstablecerContrasena.jsx'
 import Navbar from './infrastructure/components/Navbar.jsx'
 import Dashboard from './infrastructure/views/Dashboard.jsx'
 import Asignaturas from './infrastructure/views/Asignaturas.jsx'
@@ -13,24 +12,19 @@ import Horarios from './infrastructure/views/Horarios.jsx'
 import Asignaciones from './infrastructure/views/Asignaciones.jsx'
 import MisPreferencias from './infrastructure/views/MisPreferencias.jsx'
 import MiHorario from './infrastructure/views/MiHorario.jsx'
+import Asistente from './infrastructure/views/Asistente.jsx'
 import { authService } from './infrastructure/config/container.js'
 
 const ROLES_CATALOGO = ['ADMINISTRADOR', 'COORDINADOR_ACADEMICO']
 
 export default function App() {
   const [user, setUser] = useState(null)
-  const location = useLocation()
 
   useEffect(() => {
     setUser(authService.getCurrentUser())
   }, [])
 
   const onAuthChange = (u) => setUser(u)
-
-  // Ruta publica: establecer contrasena desde el enlace enviado por correo.
-  if (location.pathname === '/establecer-contrasena') {
-    return <EstablecerContrasena />
-  }
 
   if (!user) {
     return <Login onLogin={onAuthChange} />
@@ -48,6 +42,7 @@ export default function App() {
           {/* Rutas del ESTUDIANTE */}
           <Route path="/mis-preferencias" element={<MisPreferencias />} />
           <Route path="/mi-horario" element={<MiHorario />} />
+          <Route path="/asistente" element={<Asistente />} />
 
           {/* Rutas de CATALOGO (ADMIN / COORDINADOR) */}
           {esCatalogo && (

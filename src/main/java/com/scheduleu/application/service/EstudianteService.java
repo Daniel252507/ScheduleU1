@@ -2,7 +2,6 @@ package com.scheduleu.application.service;
 
 import com.scheduleu.domain.model.Estudiante;
 import com.scheduleu.domain.model.Usuario;
-import com.scheduleu.domain.port.in.EnlaceContrasenaUseCase;
 import com.scheduleu.domain.port.in.EstudianteUseCase;
 import com.scheduleu.domain.port.out.*;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -18,29 +17,23 @@ public class EstudianteService implements EstudianteUseCase {
 
     private final EstudiantePort estudianteRepository;
     private final UsuarioPort usuarioRepository;
-    private final TokenRecuperacionPort tokenRecuperacionRepository;
     private final InscripcionPort inscripcionRepository;
     private final AsignacionPort asignacionRepository;
     private final PreferenciaEstudiantePort preferenciaEstudianteRepository;
     private final PasswordEncoder passwordEncoder;
-    private final EnlaceContrasenaUseCase enlaceContrasenaUseCase;
 
     public EstudianteService(EstudiantePort estudianteRepository,
                              UsuarioPort usuarioRepository,
-                             TokenRecuperacionPort tokenRecuperacionRepository,
                              InscripcionPort inscripcionRepository,
                              AsignacionPort asignacionRepository,
                              PreferenciaEstudiantePort preferenciaEstudianteRepository,
-                             PasswordEncoder passwordEncoder,
-                             EnlaceContrasenaUseCase enlaceContrasenaUseCase) {
+                             PasswordEncoder passwordEncoder) {
         this.estudianteRepository = estudianteRepository;
         this.usuarioRepository = usuarioRepository;
-        this.tokenRecuperacionRepository = tokenRecuperacionRepository;
         this.inscripcionRepository = inscripcionRepository;
         this.asignacionRepository = asignacionRepository;
         this.preferenciaEstudianteRepository = preferenciaEstudianteRepository;
         this.passwordEncoder = passwordEncoder;
-        this.enlaceContrasenaUseCase = enlaceContrasenaUseCase;
     }
 
     @Override
@@ -60,12 +53,8 @@ public class EstudianteService implements EstudianteUseCase {
 
     @Override
     public Estudiante guardar(Estudiante estudiante) {
-        Usuario usuario = sincronizarUsuario(estudiante, true);
-        Estudiante guardado = estudianteRepository.save(estudiante);
-        if (usuario != null) {
-            enlaceContrasenaUseCase.enviarEnlaceEstablecimiento(usuario);
-        }
-        return guardado;
+        sincronizarUsuario(estudiante, true);
+        return estudianteRepository.save(estudiante);
     }
 
     @Override
@@ -97,15 +86,14 @@ public class EstudianteService implements EstudianteUseCase {
         estudianteRepository.deleteById(id);
 
         if (usuario != null) {
-            tokenRecuperacionRepository.eliminarPorUsuario(usuario.getIdUsuario());
             usuarioRepository.deleteById(usuario.getIdUsuario());
         }
     }
 
     /**
      * Crea o actualiza el usuario de acceso del estudiante (rol ESTUDIANTE).
-     * Al crear se asigna una contrasena aleatoria que nadie conoce: el estudiante
-     * debe establecerla desde el enlace que recibe por correo.
+     * Al crear se asigna una contrasena aleatoria que nadie conoce: el acceso
+     * se realiza con la cuenta de Google del estudiante.
      */
     private Usuario sincronizarUsuario(Estudiante estudiante, boolean reiniciarContrasena) {
         String correo = estudiante.getCorreo();

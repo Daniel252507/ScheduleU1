@@ -15,4 +15,10 @@ public class AuthResponse {
     private String nombre;
     private String correo;
     private Usuario.RolUsuario rol;
+    /**
+     * Marca que la cuenta de Google no existe todavia en ScheduleU y que el
+     * usuario debe completar su registro como estudiante (codigo y semestre).
+     * Cuando es true, el resto de campos de sesion vienen vacios.
+     */
+    private boolean requiereRegistro;
 }

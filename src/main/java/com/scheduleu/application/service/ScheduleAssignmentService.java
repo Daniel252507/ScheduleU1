@@ -149,6 +149,9 @@ public class ScheduleAssignmentService implements ScheduleAssignmentUseCase {
         List<Grupo> grupos = grupoRepository.findByAsignaturaIdAsignatura(idAsignatura);
 
         for (Grupo grupo : grupos) {
+            long ocupados = asignacionRepository.countByGrupoIdGrupoAndEstado(
+                    grupo.getIdGrupo(), Asignacion.EstadoAsignacion.ASIGNADO);
+            if (grupo.getCupo() != null && ocupados >= grupo.getCupo()) continue;
             List<Horario> horariosGrupo = horarioRepository.findByGrupoIdGrupo(grupo.getIdGrupo());
             boolean hayConflicto = false;
 
@@ -166,7 +169,8 @@ public class ScheduleAssignmentService implements ScheduleAssignmentUseCase {
                 return Optional.of(grupo);
             }
         }
-        return grupos.stream().findFirst();
+        // Todos los grupos chocan: NO se devuelve ninguno (antes se devolvia el primero y se generaba el choque).
+        return Optional.empty();
     }
 
     private boolean hayConflictoHorario(Horario h1, Horario h2) {

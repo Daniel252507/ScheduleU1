@@ -70,21 +70,48 @@ export class ScheduleuGateway {
   /**
    * Inicia sesión con el ID token entregado por Google Identity Services
    * y persiste el token y los datos del usuario.
+   *
+   * Si el correo no está registrado, la respuesta trae `requiereRegistro: true`
+   * con el nombre y correo propuestos (sin sesión); habrá que llamar a
+   * {@link ScheduleuGateway#registrarEstudianteConGoogle}.
    * @param {string} idToken Token compacto (JWT) emitido por Google.
-   * @returns {Promise<Usuario>}
+   * @returns {Promise<{requiereRegistro?: boolean, correo?: string, nombre?: string}>}
    */
   async loginConGoogle(idToken) {
     throw new Error('ScheduleuGateway.loginConGoogle no implementado')
   }
 
   /**
-   * Establece una nueva contraseña a partir del token recibido por correo.
-   * @param {string} token Token del enlace de correo.
-   * @param {string} contrasena Nueva contraseña.
-   * @returns {Promise<void>}
+   * Completa el alta como estudiante de una cuenta de Google que ingresa por
+   * primera vez, y persiste el token y los datos del usuario resultantes.
+   * @param {string} idToken Token compacto (JWT) emitido por Google.
+   * @param {string} nombre Nombre del estudiante.
+   * @param {string} codigo Código académico del estudiante.
+   * @param {number} semestre Semestre actual.
+   * @returns {Promise<Usuario>}
    */
-  async restablecerContrasena(token, contrasena) {
-    throw new Error('ScheduleuGateway.restablecerContrasena no implementado')
+  async registrarEstudianteConGoogle(idToken, nombre, codigo, semestre) {
+    throw new Error('ScheduleuGateway.registrarEstudianteConGoogle no implementado')
+  }
+
+  /**
+   * Agrega las clases del horario confirmado del estudiante a su Google
+   * Calendar. Requiere un token de acceso con el scope `calendar.events`.
+   * @param {string} accessToken Token OAuth devuelto por Google.
+   * @returns {Promise<{eventosCreados: number, mensaje: string}>}
+   */
+  async exportarACalendar(accessToken) {
+    throw new Error('ScheduleuGateway.exportarACalendar no implementado')
+  }
+
+  /**
+   * Envía una consulta al asistente académico (LLM) usando el horario del
+   * estudiante autenticado como contexto.
+   * @param {string} pregunta Pregunta en lenguaje natural.
+   * @returns {Promise<{respuesta: string}>}
+   */
+  async consultarAsistente(pregunta) {
+    throw new Error('ScheduleuGateway.consultarAsistente no implementado')
   }
 
   /**

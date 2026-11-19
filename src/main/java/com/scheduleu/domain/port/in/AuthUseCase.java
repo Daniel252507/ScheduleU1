@@ -7,5 +7,4 @@ import com.scheduleu.infrastructure.adapter.in.web.dto.RegistrarUsuarioRequest;
 public interface AuthUseCase {
     AuthResponse registrarUsuario(RegistrarUsuarioRequest request);
     AuthResponse login(LoginRequest request);
-    void restablecerContrasena(String token, String nuevaContrasena);
 }

@@ -34,6 +34,23 @@ public class EstudianteHorarioService implements EstudianteHorarioUseCase {
     private final GrupoPreferidoPort grupoPrefRepo;
 
     private static final int MAX_OPCIONES = 8;
+    // Cache valido solo durante una generacion de horario (evita miles de consultas a la BD en el backtracking)
+    private final ThreadLocal<Map<Integer, List<Horario>>> cacheHorarios = new ThreadLocal<>();
+    private final ThreadLocal<Map<Integer, List<Grupo>>> cacheGrupos = new ThreadLocal<>();
+
+    private List<Horario> horariosDe(Integer idGrupo) {
+        Map<Integer, List<Horario>> c = cacheHorarios.get();
+        if (c == null) return horarioRepo.findByGrupoIdGrupo(idGrupo);
+        return c.computeIfAbsent(idGrupo, horarioRepo::findByGrupoIdGrupo);
+    }
+
+    private List<Grupo> gruposDe(Integer idAsignatura) {
+        Map<Integer, List<Grupo>> c = cacheGrupos.get();
+        if (c == null) return grupoRepo.findByAsignaturaIdAsignatura(idAsignatura);
+        return c.computeIfAbsent(idAsignatura, grupoRepo::findByAsignaturaIdAsignatura);
+    }
+
+    private static final int MAX_NODOS = 200_000; // tope de seguridad del backtracking
 
     // ====================== casos de uso ======================
 
@@ -330,7 +347,7 @@ public class EstudianteHorarioService implements EstudianteHorarioUseCase {
                 f.setNombreAsignatura(a.getNombre());
                 f.setEstado(Asignacion.EstadoAsignacion.PENDIENTE.name());
                 f.setHorarios(Collections.emptyList());
-                f.setRazonPendiente("Todos los grupos cruzan horario con las otras materias seleccionadas");
+                f.setRazonPendiente(opParcial.razonesPendientes.getOrDefault(idAsigPend, "No se pudo asignar"));
                 filas.add(f);
                 pendientes++;
             }
@@ -385,6 +402,7 @@ public class EstudianteHorarioService implements EstudianteHorarioUseCase {
     private static class OpcionParcial implements Comparable<OpcionParcial> {
         Map<Integer, Grupo> asignados = new LinkedHashMap<>();
         List<Integer> pendientes = new ArrayList<>();
+        Map<Integer, String> razonesPendientes = new HashMap<>();
         int puntaje;
         @Override public int compareTo(OpcionParcial o) { return Integer.compare(o.puntaje, this.puntaje); }
     }
@@ -398,18 +416,27 @@ public class EstudianteHorarioService implements EstudianteHorarioUseCase {
             boolean aPref = grupoPrefPorAsig.containsKey(a.getAsignatura().getIdAsignatura());
             boolean bPref = grupoPrefPorAsig.containsKey(b.getAsignatura().getIdAsignatura());
             if (aPref != bPref) return aPref ? -1 : 1;
-            int na = grupoRepo.findByAsignaturaIdAsignatura(a.getAsignatura().getIdAsignatura()).size();
-            int nb = grupoRepo.findByAsignaturaIdAsignatura(b.getAsignatura().getIdAsignatura()).size();
+            int na = gruposDe(a.getAsignatura().getIdAsignatura()).size();
+            int nb = gruposDe(b.getAsignatura().getIdAsignatura()).size();
             return Integer.compare(na, nb);
         });
 
-        PriorityQueue<OpcionParcial> top = new PriorityQueue<>();
-        backtrack(ordenadas, 0, new ArrayList<>(), new OpcionParcial(),
-                jornada, grupoPrefPorAsig, priorizaDocente, top);
+        // Min-heap por puntaje: la cabeza es la PEOR opcion guardada, asi poll() descarta la peor.
+        PriorityQueue<OpcionParcial> top = new PriorityQueue<>(Comparator.comparingInt((OpcionParcial o) -> o.puntaje));
+        int[] nodos = {0};
+        cacheHorarios.set(new HashMap<>());
+        cacheGrupos.set(new HashMap<>());
+        try {
+            backtrack(ordenadas, 0, new ArrayList<>(), new OpcionParcial(),
+                    jornada, grupoPrefPorAsig, priorizaDocente, top, nodos);
+        } finally {
+            cacheHorarios.remove();
+            cacheGrupos.remove();
+        }
 
         List<OpcionParcial> lista = new ArrayList<>(top);
-        Collections.sort(lista);
-        return lista;
+        Collections.sort(lista); // mejor -> peor
+        return lista.size() > MAX_OPCIONES ? new ArrayList<>(lista.subList(0, MAX_OPCIONES)) : lista;
     }
 
     private void backtrack(List<Inscripcion> ordenadas,
@@ -419,35 +446,42 @@ public class EstudianteHorarioService implements EstudianteHorarioUseCase {
                            PreferenciaEstudiante.Jornada jornada,
                            Map<Integer, Grupo> grupoPrefPorAsig,
                            boolean priorizaDocente,
-                           PriorityQueue<OpcionParcial> top) {
+                           PriorityQueue<OpcionParcial> top,
+                           int[] nodos) {
+        if (nodos[0]++ > MAX_NODOS) return;
         if (idx == ordenadas.size()) {
             OpcionParcial copia = new OpcionParcial();
             copia.asignados = new LinkedHashMap<>(actual.asignados);
             copia.pendientes = new ArrayList<>(actual.pendientes);
+            copia.razonesPendientes = new HashMap<>(actual.razonesPendientes);
             copia.puntaje = actual.puntaje;
+            // evitar opciones repetidas (mismos grupos)
+            for (OpcionParcial o : top) {
+                if (mismosGrupos(o, copia)) return;
+            }
             top.offer(copia);
-            if (top.size() > MAX_OPCIONES * 5) top.poll();
+            if (top.size() > MAX_OPCIONES) top.poll(); // descarta la peor
             return;
         }
 
         Inscripcion ins = ordenadas.get(idx);
         Asignatura a = ins.getAsignatura();
-        List<Grupo> cands = grupoRepo.findByAsignaturaIdAsignatura(a.getIdAsignatura());
-        cands = cands.stream()
+        List<Grupo> candsRaw = gruposDe(a.getIdAsignatura());
+        List<Grupo> cands = candsRaw.stream()
                 .filter(g -> g.getCupoDisponible() == null || g.getCupoDisponible() > 0 || g.getCupo() > 0)
                 .collect(Collectors.toList());
         cands = ordenarCandidatos(cands, jornada, grupoPrefPorAsig.get(a.getIdAsignatura()), priorizaDocente);
 
         boolean algunaAsignada = false;
         for (Grupo g : cands) {
-            List<Horario> gh = horarioRepo.findByGrupoIdGrupo(g.getIdGrupo());
+            List<Horario> gh = horariosDe(g.getIdGrupo());
             if (!hayCruce(ocupados, gh)) {
                 int pts = puntajeGrupo(g, jornada, grupoPrefPorAsig.get(a.getIdAsignatura()), priorizaDocente);
                 actual.asignados.put(a.getIdAsignatura(), g);
                 actual.puntaje += pts;
                 ocupados.addAll(gh);
                 backtrack(ordenadas, idx + 1, ocupados, actual,
-                        jornada, grupoPrefPorAsig, priorizaDocente, top);
+                        jornada, grupoPrefPorAsig, priorizaDocente, top, nodos);
                 ocupados.subList(ocupados.size() - gh.size(), ocupados.size()).clear();
                 actual.puntaje -= pts;
                 actual.asignados.remove(a.getIdAsignatura());
@@ -456,20 +490,37 @@ public class EstudianteHorarioService implements EstudianteHorarioUseCase {
         }
 
         if (!algunaAsignada) {
+            String razon = candsRaw.isEmpty() ? "No hay grupos creados para esta materia" :
+                          cands.isEmpty() ? "No hay cupos disponibles en los grupos existentes" :
+                          "Todos los grupos cruzan horario con las otras materias seleccionadas";
             actual.pendientes.add(a.getIdAsignatura());
+            actual.razonesPendientes.put(a.getIdAsignatura(), razon);
             actual.puntaje -= 200;
             backtrack(ordenadas, idx + 1, ocupados, actual,
-                    jornada, grupoPrefPorAsig, priorizaDocente, top);
-            actual.pendientes.remove(actual.pendientes.size() - 1);
+                    jornada, grupoPrefPorAsig, priorizaDocente, top, nodos);
             actual.puntaje += 200;
-        } else if (!cands.isEmpty()) {
+            actual.razonesPendientes.remove(a.getIdAsignatura());
+            actual.pendientes.remove(actual.pendientes.size() - 1);
+        } else if (!cands.isEmpty() && nodos[0] < MAX_NODOS / 2) {
+            // Tambien explorar dejarla pendiente (puede liberar espacio para otras materias).
             actual.pendientes.add(a.getIdAsignatura());
+            actual.razonesPendientes.put(a.getIdAsignatura(), "Omitida para optimizar otras materias");
             actual.puntaje -= 200;
             backtrack(ordenadas, idx + 1, ocupados, actual,
-                    jornada, grupoPrefPorAsig, priorizaDocente, top);
-            actual.pendientes.remove(actual.pendientes.size() - 1);
+                    jornada, grupoPrefPorAsig, priorizaDocente, top, nodos);
             actual.puntaje += 200;
+            actual.razonesPendientes.remove(a.getIdAsignatura());
+            actual.pendientes.remove(actual.pendientes.size() - 1);
         }
+    }
+
+    private boolean mismosGrupos(OpcionParcial a, OpcionParcial b) {
+        if (a.asignados.size() != b.asignados.size()) return false;
+        for (Map.Entry<Integer, Grupo> e : a.asignados.entrySet()) {
+            Grupo otro = b.asignados.get(e.getKey());
+            if (otro == null || !otro.getIdGrupo().equals(e.getValue().getIdGrupo())) return false;
+        }
+        return true;
     }
 
     private int puntajeGrupo(Grupo g, PreferenciaEstudiante.Jornada j, Grupo preferido, boolean priorizaDocente) {
@@ -492,7 +543,7 @@ public class EstudianteHorarioService implements EstudianteHorarioUseCase {
 
     private int puntajeJornada(Grupo g, PreferenciaEstudiante.Jornada j) {
         int p = 0;
-        for (Horario h : horarioRepo.findByGrupoIdGrupo(g.getIdGrupo())) {
+        for (Horario h : horariosDe(g.getIdGrupo())) {
             PreferenciaEstudiante.Jornada hj = clasificar(h.getHoraInicio());
             if (hj == j) p += 50;
             else if (j == PreferenciaEstudiante.Jornada.MANANA && hj == PreferenciaEstudiante.Jornada.TARDE) p -= 10;

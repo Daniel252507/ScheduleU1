@@ -31,21 +31,28 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         String token = getJwtFromRequest(request);
 
-        if (StringUtils.hasText(token) && !jwtTokenProvider.isTokenExpired(token)) {
-            String correo = jwtTokenProvider.getCorreoFromToken(token);
+        try {
+            if (StringUtils.hasText(token) && !jwtTokenProvider.isTokenExpired(token)) {
+                String correo = jwtTokenProvider.getCorreoFromToken(token);
 
-            UserDetails userDetails = customUserDetailsService.loadUserByUsername(correo);
+                UserDetails userDetails = customUserDetailsService.loadUserByUsername(correo);
 
-            if (jwtTokenProvider.validateToken(token, userDetails.getUsername())) {
-                UsernamePasswordAuthenticationToken authentication =
-                        new UsernamePasswordAuthenticationToken(
-                                userDetails,
-                                null,
-                                userDetails.getAuthorities()
-                        );
-                authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                SecurityContextHolder.getContext().setAuthentication(authentication);
+                if (jwtTokenProvider.validateToken(token, userDetails.getUsername())) {
+                    UsernamePasswordAuthenticationToken authentication =
+                            new UsernamePasswordAuthenticationToken(
+                                    userDetails,
+                                    null,
+                                    userDetails.getAuthorities()
+                            );
+                    authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                    SecurityContextHolder.getContext().setAuthentication(authentication);
+                }
             }
+        } catch (Exception e) {
+            // Token viejo, malformado o de un usuario que ya no existe: se trata la peticion como NO autenticada
+            // (las rutas protegidas responderan 401/403 y el frontend cerrara la sesion), en vez de un error 500.
+            SecurityContextHolder.clearContext();
+            logger.debug("Token JWT ignorado: " + e.getMessage());
         }
 
         filterChain.doFilter(request, response);

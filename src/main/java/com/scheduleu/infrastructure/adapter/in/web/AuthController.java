@@ -6,7 +6,7 @@ import com.scheduleu.infrastructure.adapter.in.web.dto.AuthResponse;
 import com.scheduleu.infrastructure.adapter.in.web.dto.GoogleLoginRequest;
 import com.scheduleu.infrastructure.adapter.in.web.dto.LoginRequest;
 import com.scheduleu.infrastructure.adapter.in.web.dto.RegistrarUsuarioRequest;
-import com.scheduleu.infrastructure.adapter.in.web.dto.RestablecerContrasenaRequest;
+import com.scheduleu.infrastructure.adapter.in.web.dto.RegistroGoogleRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -48,24 +48,30 @@ public class AuthController {
     @PostMapping("/google")
     public ResponseEntity<?> loginConGoogle(@RequestBody GoogleLoginRequest request) {
         try {
+            // Si el correo no esta registrado, la respuesta trae
+            // requiereRegistro = true con los datos para completar el alta.
             return new ResponseEntity<>(googleAuthService.loginConGoogle(request.getIdToken()), HttpStatus.OK);
         } catch (RuntimeException e) {
-            // Se devuelve el motivo para que el usuario sepa si su correo no
-            // esta registrado o si el token de Google resulto invalido.
-            String motivo = (e.getMessage() == null || e.getMessage().isBlank())
-                    ? "No se pudo iniciar sesion con Google"
-                    : e.getMessage();
-            return new ResponseEntity<>(Map.of("error", motivo), HttpStatus.UNAUTHORIZED);
+            return new ResponseEntity<>(Map.of("error", motivo(e)), HttpStatus.UNAUTHORIZED);
         }
     }
 
-    @PostMapping("/restablecer-contrasena")
-    public ResponseEntity<Void> restablecerContrasena(@RequestBody RestablecerContrasenaRequest request) {
+    /**
+     * Completa el alta del estudiante que ingresa por primera vez con Google.
+     */
+    @PostMapping("/google/registro")
+    public ResponseEntity<?> registrarConGoogle(@RequestBody RegistroGoogleRequest request) {
         try {
-            authService.restablecerContrasena(request.getToken(), request.getContrasena());
-            return ResponseEntity.ok().build();
+            return new ResponseEntity<>(googleAuthService.registrarEstudianteConGoogle(request), HttpStatus.CREATED);
         } catch (RuntimeException e) {
-            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+            return new ResponseEntity<>(Map.of("error", motivo(e)), HttpStatus.BAD_REQUEST);
         }
+    }
+
+    /** Motivo legible del fallo para mostrarlo en el frontend. */
+    private String motivo(RuntimeException e) {
+        return (e.getMessage() == null || e.getMessage().isBlank())
+                ? "No se pudo completar la operacion con Google"
+                : e.getMessage();
     }
 }

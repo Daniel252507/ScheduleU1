@@ -38,10 +38,9 @@ services:
       SPRING_JPA_HIBERNATE_DDL_AUTO: update
       JWT_SECRET: scheduleu-secret-key-2024-universidad-cundinamarca-sistemas-informacion
       JWT_EXPIRATION: "86400000"
-      MAIL_USERNAME: ${MAIL_USERNAME:-}
-      MAIL_PASSWORD: ${MAIL_PASSWORD:-}
-      MAIL_ENABLED: ${MAIL_ENABLED:-true}
-      APP_FRONTEND_URL: ${APP_FRONTEND_URL:-http://localhost:3000}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-3.8-flash}
     depends_on:
       db:
         condition: service_healthy

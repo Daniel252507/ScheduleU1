@@ -27,18 +27,24 @@ export function createAuthService(gateway) {
 
     /**
      * Inicia sesión con la cuenta de Google del usuario.
+     * Si el correo todavía no está registrado, devuelve una respuesta con
+     * `requiereRegistro: true`: hay que completar el alta con
+     * `registrarEstudianteConGoogle`.
      * @param {string} idToken Token entregado por Google Identity Services.
-     * @returns {Promise<Usuario>}
+     * @returns {Promise<{requiereRegistro?: boolean, nombre?: string, correo?: string}>}
      */
     loginConGoogle: (idToken) => gateway.loginConGoogle(idToken),
 
     /**
-     * Establece una nueva contraseña usando el token recibido por correo.
-     * @param {string} token
-     * @param {string} contrasena
-     * @returns {Promise<void>}
+     * Completa el alta como estudiante de una cuenta de Google nueva.
+     * @param {string} idToken Token entregado por Google Identity Services.
+     * @param {string} nombre Nombre del estudiante.
+     * @param {string} codigo Código académico.
+     * @param {number} semestre Semestre actual.
+     * @returns {Promise<Usuario>}
      */
-    restablecerContrasena: (token, contrasena) => gateway.restablecerContrasena(token, contrasena),
+    registrarEstudianteConGoogle: (idToken, nombre, codigo, semestre) =>
+      gateway.registrarEstudianteConGoogle(idToken, nombre, codigo, semestre),
 
     /**
      * Cierra la sesión actual.
